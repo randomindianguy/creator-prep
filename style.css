@@ -185,6 +185,12 @@
   .q-custom{width:100%;padding:14px 16px;border-radius:var(--radius-md);border:1.5px solid var(--border-subtle);background:transparent;color:#fff;font-size:13px;font-weight:500;outline:none;margin-top:4px;transition:border-color 0.15s}
   .q-custom::placeholder{color:#444}
   .q-custom:focus{border-color:#444}
+  .q-custom-input{display:flex;gap:8px;margin-top:4px}
+  .q-custom-input input{flex:1;padding:14px 16px;border-radius:var(--radius-md);border:1.5px solid var(--border-subtle);background:var(--bg-card);color:#fff;font-size:14px;font-weight:500;font-family:inherit;outline:none;transition:border-color 0.15s}
+  .q-custom-input input::placeholder{color:#444}
+  .q-custom-input input:focus{border-color:rgba(255,255,255,0.25)}
+  .q-custom-input button{padding:0 18px;border-radius:var(--radius-md);background:var(--tiktok-red);color:#fff;font-size:18px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all 0.15s;flex-shrink:0}
+  .q-custom-input button:hover{background:#e0264d}
   .btn-back{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--text-tertiary);font-weight:600;padding:10px 0;transition:color 0.15s}
   .btn-back:hover{color:#fff}
   .btn-back.hidden{display:none}
