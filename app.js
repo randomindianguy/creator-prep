@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════════════════════
-const API_URL = 'http://localhost:5001'; // TODO: Change to Railway URL for production
+const API_URL = 'web-production-6060a.up.railway.app';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
