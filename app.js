@@ -344,6 +344,16 @@ async function showCameraScreen() {
   state.currentBeat = 0;
   state.recording = false;
 
+  // Stop any previous review video playback
+  const reviewVideo = document.getElementById('review-video');
+  if (reviewVideo) {
+    reviewVideo.pause();
+    reviewVideo.src = '';
+  }
+
+  // Stop previous camera stream if any
+  stopCamera();
+
   // Reset UI
   document.getElementById('tp-preview').style.display = '';
   document.getElementById('tp-recording').classList.add('hidden');
@@ -677,6 +687,7 @@ async function practiceAgain() {
 
       if (res.ok) {
         const data = await res.json();
+        console.log('Refine response:', data);
         if (data.beats && data.beats.length > 0) {
           // Update the blueprint with refined beats
           state.blueprint.beats = data.beats;
