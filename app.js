@@ -101,25 +101,34 @@ async function startFlow() {
 
   showScreen('screen-loading');
 
-  try {
-    const res = await fetch(`${API_URL}/generate-questions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ niche: state.niche, topic: state.topic }),
-    });
+  const maxRetries = 2;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(`${API_URL}/generate-questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche: state.niche, topic: state.topic }),
+      });
 
-    if (!res.ok) throw new Error('Failed to generate questions');
-    const data = await res.json();
+      if (!res.ok) throw new Error('Failed to generate questions');
+      const data = await res.json();
 
-    state.questions = data.questions;
-    state.currentQ = 0;
-    state.answers = {};
+      state.questions = data.questions;
+      state.currentQ = 0;
+      state.answers = {};
 
-    showQuestionScreen();
-  } catch (err) {
-    console.error(err);
-    alert('Failed to generate questions. Make sure the backend is running.');
-    showScreen('screen-topic');
+      showQuestionScreen();
+      return;
+    } catch (err) {
+      console.warn(`Attempt ${attempt + 1} failed:`, err);
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 1500));
+      } else {
+        console.error(err);
+        alert('Failed to generate questions. Make sure the backend is running.');
+        showScreen('screen-topic');
+      }
+    }
   }
 }
 
@@ -644,30 +653,50 @@ async function analyzeRecording(blob) {
 // ═══════════════════════════════════════════════════════════
 // PRACTICE LOOP: Merge coaching prompts into teleprompter
 // ═══════════════════════════════════════════════════════════
-function practiceAgain() {
+async function practiceAgain() {
   state.practiceCount++;
 
-  if (state.coachingPrompts.length > 0) {
-    // Rebuild allPoints: keep hook, insert coaching prompts as new beats, keep closer
-    const hook = allPoints[0]; // HOOK
-    const closer = allPoints[allPoints.length - 1]; // CLOSER
-    const existingBeats = allPoints.slice(1, -1); // Everything between hook and closer
+  if (state.coachingPrompts.length > 0 && state.blueprint) {
+    // Show generating screen while we refine
+    showScreen('screen-generating');
+    const summary = document.getElementById('gen-summary');
+    summary.textContent = `Weaving coaching insights into your blueprint...`;
 
-    // Add coaching prompts as new beats after existing ones
-    const newBeats = state.coachingPrompts.map((prompt, i) => ({
-      label: `💡 COACH ${i + 1}`,
-      text: prompt,
-      color: '#25f4ee',
-      isCoach: true,
-    }));
+    try {
+      const res = await fetch(`${API_URL}/refine-blueprint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hook: state.blueprint.hook,
+          beats: state.blueprint.beats,
+          closer: state.blueprint.closer,
+          coaching_prompts: state.coachingPrompts,
+          topic: state.topic,
+        }),
+      });
 
-    // Merge: hook → existing beats → new coach beats → closer
-    allPoints = [hook, ...existingBeats, ...newBeats, closer];
+      if (res.ok) {
+        const data = await res.json();
+        if (data.beats && data.beats.length > 0) {
+          // Update the blueprint with refined beats
+          state.blueprint.beats = data.beats;
 
-    console.log(`Practice loop #${state.practiceCount}: ${allPoints.length} beats (${newBeats.length} new from coach)`);
+          // Rebuild allPoints with same structure, richer content
+          allPoints = [
+            { label: 'HOOK', text: state.blueprint.hook, color: '#fe2c55' },
+            ...data.beats.map((b, i) => ({ label: `BEAT ${i + 1}`, text: b, color: '#fff' })),
+            { label: 'CLOSER', text: state.blueprint.closer, color: '#25f4ee' },
+          ];
+
+          console.log(`Practice loop #${state.practiceCount}: beats refined with ${state.coachingPrompts.length} coaching insights`);
+        }
+      }
+    } catch (e) {
+      console.warn('Refine failed, keeping original beats:', e);
+    }
   }
 
-  // Clear prompts so they don't stack on next loop
+  // Clear prompts so they don't stack
   state.coachingPrompts = [];
 
   // Go to camera with updated teleprompter

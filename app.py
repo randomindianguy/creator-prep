@@ -193,6 +193,65 @@ def coach_nudge():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/refine-blueprint", methods=["POST"])
+def refine_blueprint():
+    """
+    Practice loop: take the original blueprint + coaching prompts from pause analysis,
+    and return an improved blueprint where coaching insights are woven INTO existing beats.
+    Same structure, richer content — not more beats.
+    """
+    data = request.get_json()
+    hook = data.get("hook", "")
+    beats = data.get("beats", [])
+    closer = data.get("closer", "")
+    coaching_prompts = data.get("coaching_prompts", [])
+    topic = data.get("topic", "")
+
+    beats_text = "\n".join([f"Beat {i+1}: {b}" for i, b in enumerate(beats)])
+    prompts_text = "\n".join([f"- {p}" for p in coaching_prompts])
+
+    try:
+        message = claude.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1000,
+            messages=[{
+                "role": "user",
+                "content": f"""Here's a creator's talking point blueprint for a TikTok video about "{topic}":
+
+Hook: {hook}
+{beats_text}
+Closer: {closer}
+
+After recording, they froze at certain points. The coaching analysis suggested these additions:
+{prompts_text}
+
+Rewrite ONLY the beats to weave in these coaching insights naturally. The beats should feel richer and more specific — like the creator thought of more to say — NOT like separate interruptions.
+
+Rules:
+- Keep the SAME number of beats ({len(beats)})
+- Keep the hook and closer exactly as-is
+- Each beat should incorporate relevant coaching insights
+- Use the creator's voice, not formal language
+- If a coaching prompt doesn't fit any beat, skip it
+
+Return ONLY valid JSON:
+{{"beats": ["beat 1 text", "beat 2 text", ...]}}"""
+            }]
+        )
+
+        raw = message.content[0].text.strip()
+        # Strip markdown fences if present
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+
+        result = json.loads(raw)
+        return jsonify({"success": True, "beats": result["beats"]})
+
+    except Exception as e:
+        print(f"Refine blueprint error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 # ============================================================
 # CONFIDENCE COACH ENDPOINTS (existing)
 # ============================================================
