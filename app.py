@@ -12,10 +12,10 @@ Stack: Whisper API + Claude API
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import anthropic
+from openai import OpenAI
 from dotenv import load_dotenv
 import os
 import tempfile
-import subprocess
 import time
 import json
 
@@ -24,20 +24,9 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# Initialize Claude client
+# Initialize API clients
 claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
-# Try to load Whisper (may not be available in all environments)
-whisper_model = None
-try:
-    import whisper
-    print("Loading Whisper model...")
-    whisper_model = whisper.load_model("tiny")
-    print("Whisper model loaded!")
-except ImportError:
-    print("Whisper not available — /analyze endpoint disabled")
-except Exception as e:
-    print(f"Whisper load failed: {e} — /analyze endpoint disabled")
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 # ============================================================
@@ -209,31 +198,21 @@ def coach_nudge():
 # ============================================================
 
 def transcribe_audio(audio_path: str) -> dict:
-    """Transcribe audio using Whisper with word-level timestamps."""
-    if not whisper_model:
-        raise Exception("Whisper model not available")
-
-    wav_path = audio_path.replace(".webm", ".wav")
-    result = subprocess.run([
-        "ffmpeg", "-y", "-i", audio_path,
-        "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", wav_path
-    ], capture_output=True, text=True)
-
-    if result.returncode != 0:
-        raise Exception(f"Audio conversion failed: {result.stderr}")
-
-    result = whisper_model.transcribe(wav_path, word_timestamps=True, verbose=False)
+    """Transcribe audio using OpenAI Whisper API with word-level timestamps."""
+    with open(audio_path, "rb") as audio_file:
+        result = openai_client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file,
+            response_format="verbose_json",
+            timestamp_granularities=["word"]
+        )
 
     words = []
-    for segment in result["segments"]:
-        if "words" in segment:
-            for word in segment["words"]:
-                words.append({"word": word["word"], "start": word["start"], "end": word["end"]})
+    if hasattr(result, "words") and result.words:
+        for w in result.words:
+            words.append({"word": w.word, "start": w.start, "end": w.end})
 
-    if os.path.exists(wav_path):
-        os.remove(wav_path)
-
-    return {"text": result["text"], "words": words}
+    return {"text": result.text, "words": words}
 
 
 def detect_pauses(words: list, threshold: float = 3.0) -> list:
@@ -281,17 +260,13 @@ def generate_prompt(context: str) -> str:
 def health():
     return jsonify({
         "status": "ok",
-        "service": "creator-prep",
-        "whisper_available": whisper_model is not None
+        "service": "creator-prep"
     })
 
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
     """Full recording analysis: transcribe → detect pauses → generate prompts."""
-    if not whisper_model:
-        return jsonify({"error": "Whisper not available on this server"}), 503
-
     start_time = time.time()
 
     if "audio" not in request.files:

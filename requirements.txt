@@ -1,5 +1,6 @@
-flask
-flask-cors
-anthropic
-openai-whisper
-gunicorn
+flask==3.1.0
+flask-cors==5.0.1
+anthropic==0.43.0
+openai==1.61.0
+python-dotenv==1.0.1
+gunicorn==23.0.0

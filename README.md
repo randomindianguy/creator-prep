@@ -15,6 +15,7 @@ Through user research with daily TikTok consumers who've never posted, the consi
 That's not a confidence gap. It's not a content gap (which is what AI script generators assume). It's an **articulation gap** — the thoughts are there, they just can't get organized when the camera turns on.
 
 **B=MAT framing:**
+
 - ✅ **Motivation** — they want to post
 - ✅ **Trigger** — trends, sounds, opinions on things they care about
 - ❌ **Ability** — articulating clearly in the moment
@@ -37,14 +38,16 @@ Creator Prep solves for ability.
 
 ## Tech Stack
 
-| Layer | Tool | Why |
-|-------|------|-----|
-| LLM | Claude (Anthropic) | Precise instruction-following for structured JSON output — disambiguation questions need genuinely divergent options, not variations |
-| Transcription | OpenAI Whisper | Word-level timestamps enable pause detection and context-aware coaching |
-| Backend | Flask + Python | Lightweight, 4 endpoints, fast to iterate |
-| Frontend | Vanilla JS | No framework overhead, TikTok-native camera UI needs direct DOM/media control |
-| Backend Hosting | Railway | Simple Python deploys with env var management |
-| Frontend Hosting | Vercel | Static deploy, instant cache invalidation |
+
+| Layer            | Tool               | Why                                                                                                                                  |
+| ---------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| LLM              | Claude (Anthropic) | Precise instruction-following for structured JSON output — disambiguation questions need genuinely divergent options, not variations |
+| Transcription    | OpenAI Whisper API | Word-level timestamps enable pause detection and context-aware coaching. API keeps the deploy lightweight (~200MB vs ~8GB local)     |
+| Backend          | Flask + Python     | Lightweight, 4 endpoints, fast to iterate                                                                                            |
+| Frontend         | Vanilla JS         | No framework overhead, TikTok-native camera UI needs direct DOM/media control                                                        |
+| Backend Hosting  | Railway            | Simple Python deploys with env var management                                                                                        |
+| Frontend Hosting | Vercel             | Static deploy, instant cache invalidation                                                                                            |
+
 
 ## API Endpoints
 
@@ -54,29 +57,32 @@ POST /generate-blueprint   → Questions + answers → Hook, beats, closer bluep
 POST /coach-nudge          → Blueprint context → Continuation prompt for pause moments
 POST /analyze              → Audio file → Whisper transcription + pause detection + coaching prompts
 GET  /health               → Status check
+
 ```
 
 ## Local Development
 
 ### Prerequisites
+
 - Python 3.10+
 - `ANTHROPIC_API_KEY` in `.env`
-- `ffmpeg` installed (for Whisper audio processing)
-- OpenAI Whisper (`pip install openai-whisper`)
+- `OPENAI_API_KEY` in `.env` (for Whisper transcription)
 
 ### Backend
+
 ```bash
-cd backend
-pip install flask flask-cors anthropic python-dotenv openai-whisper
+pip install flask flask-cors anthropic openai python-dotenv
 python app.py
 # Runs on http://localhost:5001
+
 ```
 
 ### Frontend
+
 ```bash
-cd frontend
 python3 -m http.server 8000
 # Opens at http://localhost:8000
+
 ```
 
 Update `API_URL` in `app.js` to point to your backend (`http://localhost:5001` for local, or your Railway URL for production).
@@ -84,13 +90,15 @@ Update `API_URL` in `app.js` to point to your backend (`http://localhost:5001` f
 ## Project Structure
 
 ```
-├── frontend/
-│   ├── index.html      # Landing page + phone mockup demo
-│   ├── style.css       # TikTok design system (Plus Jakarta Sans, cyan/red palette)
-│   └── app.js          # Demo flow, camera, teleprompter, practice loop
-├── backend/
-│   └── app.py          # Flask API — Claude + Whisper integration
+├── index.html          # Landing page + phone mockup demo
+├── style.css           # TikTok design system (Plus Jakarta Sans, cyan/red palette)
+├── app.js              # Demo flow, camera, teleprompter, practice loop
+├── app.py              # Flask API — Claude + Whisper API integration
+├── requirements.txt    # Python dependencies
+├── Procfile            # Gunicorn config for Railway
+├── .env.example        # Required API keys
 └── README.md
+
 ```
 
 ## What I Learned
