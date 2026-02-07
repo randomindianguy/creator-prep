@@ -1,3 +1,7 @@
+Demo here: [creator-prep.vercel.app](https://creator-prep.vercel.app/)
+
+---
+
 # Creator Prep
 
 **AI-powered creator activation for TikTok** — helps first-time creators go from "I have an opinion" to "I just posted my first video."
