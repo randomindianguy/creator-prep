@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════════════════════
-const API_URL = 'https://web-production-6060a.up.railway.app';
+const API_URL = 'http://localhost:5001'; // TODO: Change to Railway URL for production
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -226,21 +226,11 @@ function selectAnswer(answer) {
 // GENERATING SCREEN
 // ═══════════════════════════════════════════════════════════
 async function generateBlueprint() {
-  // Show generating screen with all answers
   showScreen('screen-generating');
 
-  const genDiv = document.getElementById('gen-answers');
-  genDiv.innerHTML = '';
-  state.questions.forEach((q, i) => {
-    const el = document.createElement('div');
-    el.className = 'gen-answer';
-    el.style.animationDelay = `${i * 0.1}s`;
-    el.innerHTML = `
-      <div class="gen-answer-q">${escapeHtml(q.question)}</div>
-      <div class="gen-answer-a">→ ${escapeHtml(state.answers[i])}</div>
-    `;
-    genDiv.appendChild(el);
-  });
+  // Set a simple summary line
+  const summary = document.getElementById('gen-summary');
+  summary.textContent = `${state.questions.length} answers about "${state.topic}" → building your blueprint`;
 
   try {
     const qaPairs = state.questions.map((q, i) => ({
