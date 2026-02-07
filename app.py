@@ -203,6 +203,7 @@ def transcribe_audio(audio_path: str) -> dict:
         result = openai_client.audio.transcriptions.create(
             model="whisper-1",
             file=audio_file,
+            language="en",
             response_format="verbose_json",
             timestamp_granularities=["word"]
         )
