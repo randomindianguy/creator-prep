@@ -1,4 +1,4 @@
-Demo here: [creator-prep.vercel.app](https://creator-prep.vercel.app/)
+Live demo here: [creator-prep.vercel.app](https://creator-prep.vercel.app/)
 
 ---
 
