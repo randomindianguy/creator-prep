@@ -95,6 +95,9 @@ function initTopicScreen() {
 }
 
 async function startFlow() {
+  // Track: user clicked "Let's figure this out"
+  if (window.posthog) posthog.capture('demo_started', { niche: state.niche, topic: state.topic });
+
   // Hide the annotation arrow
   const ann = document.getElementById('demo-annotation');
   if (ann) ann.classList.add('fadeout');
@@ -227,6 +230,8 @@ function selectAnswer(answer) {
     state.currentQ++;
     setTimeout(renderQuestion, 250);
   } else {
+    // Track: finished all disambiguation questions
+    if (window.posthog) posthog.capture('questions_completed', { question_count: state.questions.length });
     generateBlueprint();
   }
 }
@@ -270,6 +275,8 @@ async function generateBlueprint() {
 // ═══════════════════════════════════════════════════════════
 function showBlueprintScreen() {
   showScreen('screen-blueprint');
+  // Track: blueprint shown to user
+  if (window.posthog) posthog.capture('blueprint_generated', { beats: state.blueprint?.beats?.length || 0 });
 
   const bp = state.blueprint;
   document.getElementById('bp-meta').textContent = `${state.niche} · ~${bp.duration}s · Your thoughts, organized.`;
@@ -449,6 +456,8 @@ function beginRecording() {
   state.recording = true;
   state.currentBeat = 0;
   state.seconds = 0;
+  // Track: user started recording
+  if (window.posthog) posthog.capture('recording_started');
 
   // UI updates
   document.getElementById('tp-preview').style.display = 'none';
@@ -605,6 +614,8 @@ async function analyzeRecording(blob) {
     // Hide loading, show results
     analyzing.style.display = 'none';
     results.classList.remove('hidden');
+    // Track: recording analyzed successfully
+    if (window.posthog) posthog.capture('recording_analyzed', { pauses: data.pauses?.length || 0 });
 
     // Transcript
     const transcriptDiv = document.getElementById('review-transcript');
@@ -665,6 +676,9 @@ async function analyzeRecording(blob) {
 // ═══════════════════════════════════════════════════════════
 async function practiceAgain() {
   state.practiceCount++;
+  // Track: user clicked "Practice with refined script"
+  if (window.posthog) posthog.capture('practice_loop_started', { practiceCount: state.practiceCount });
+  console.log('Practice Again clicked. Coaching prompts:', state.coachingPrompts.length, 'Blueprint:', !!state.blueprint);
 
   if (state.coachingPrompts.length > 0 && state.blueprint) {
     // Show generating screen while we refine
@@ -685,9 +699,14 @@ async function practiceAgain() {
         }),
       });
 
-      if (res.ok) {
+      console.log('Refine response status:', res.status);
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error('Refine failed:', res.status, errData);
+      } else {
         const data = await res.json();
-        console.log('Refine response:', data);
+        console.log('Refined beats:', data.beats);
         if (data.beats && data.beats.length > 0) {
           // Update the blueprint with refined beats
           state.blueprint.beats = data.beats;
@@ -699,12 +718,14 @@ async function practiceAgain() {
             { label: 'CLOSER', text: state.blueprint.closer, color: '#25f4ee' },
           ];
 
-          console.log(`Practice loop #${state.practiceCount}: beats refined with ${state.coachingPrompts.length} coaching insights`);
+          console.log(`Practice loop #${state.practiceCount}: ${allPoints.length} points, beats refined`);
         }
       }
     } catch (e) {
-      console.warn('Refine failed, keeping original beats:', e);
+      console.error('Refine fetch error:', e);
     }
+  } else {
+    console.warn('Skipped refine — no coaching prompts or no blueprint');
   }
 
   // Clear prompts so they don't stack
